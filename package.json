@@ -6,6 +6,9 @@
   "scripts": {
     "test": "pathchkr -l ."
   },
+  "bin": {
+    "pathchkr": "./index.js"
+  },
   "keywords": [
     "path",
     "checker",
@@ -18,5 +21,11 @@
   "dependencies": {
     "args": "^3.0.8",
     "node-dir": "^0.1.17"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/kylestraderarmature/path-checker.git"
+  },
+  "homepage": "https://bitbucket.org/kylestraderarmature/path-checker#readme"
 }

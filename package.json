@@ -1,0 +1,22 @@
+{
+  "name": "pathchkr",
+  "version": "0.0.0",
+  "description": "Custom linting tool to ensure that only lower-case characters are used in paths and file names. Applies to HTML, and JS files. ",
+  "main": "index.js",
+  "scripts": {
+    "test": "pathchkr -l ."
+  },
+  "keywords": [
+    "path",
+    "checker",
+    "lowercase",
+    "lint",
+    "tool"
+  ],
+  "author": "Kyle Strader",
+  "license": "ISC",
+  "dependencies": {
+    "args": "^3.0.8",
+    "node-dir": "^0.1.17"
+  }
+}

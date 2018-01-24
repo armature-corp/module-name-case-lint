@@ -1,7 +1,4 @@
-#!/usr/bin/env node
-
 const dir = require('node-dir');
-const args = require('args');
 const resolve = require('path').resolve;
 
 const constants = {
@@ -9,13 +6,23 @@ const constants = {
     html_fileExtension: 'html'
 };
 
-args.option('directory', 'The directory on which this tool will be run.');
-
-const flags = args.parse(process.argv);
+let gDirectory = undefined;
+let gExceptions = undefined;
 
 let js_import_errors = [];
 let js_require_errors = [];
 let html_require_errors = [];
+
+const PathMatchesExceptions = (path) => {
+    let pathComponents = path.split('/');
+    for (let i = 0; i < pathComponents.length; ++i) {
+        let component = pathComponents[i];
+        if (component.toLowerCase() !== component && gExceptions.indexOf(component) === -1) {
+            return false;
+        }
+    }
+    return true;
+};
 
 const fileCallback = function (err, content, filename, next) {
     let lines = content.split('\n');
@@ -55,8 +62,8 @@ const fileCallback = function (err, content, filename, next) {
                 path = path.replace(/\r?\n|\r/, '');
 
                 if (path) {
-                    if (path.toLowerCase() !== path) {
-                        js_import_errors.push(`${path} => .${filename.replace(resolve(flags.directory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
+                    if (path.toLowerCase() !== path && !PathMatchesExceptions(path)) {
+                        js_import_errors.push(`${path} => .${filename.replace(resolve(gDirectory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
                     }
                 }
             }
@@ -73,8 +80,8 @@ const fileCallback = function (err, content, filename, next) {
                     .replace(')', '')
                     .replace(';', '');
 
-                if(includeString.toLowerCase() !== includeString) {
-                    js_require_errors.push(`${includeString} => .${filename.replace(resolve(flags.directory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
+                if(includeString.toLowerCase() !== includeString && !PathMatchesExceptions(includeString)) {
+                    js_require_errors.push(`${includeString} => .${filename.replace(resolve(gDirectory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
                 }
             }
         }
@@ -110,8 +117,8 @@ const fileCallback = function (err, content, filename, next) {
                 slicedPath = slicedPath.slice(openPathIndex + 1);
                 slicedPath = slicedPath.slice(0, slicedPath.indexOf(scannedCharacter));
                 slicedPath.replace('"', '');
-                if (slicedPath.toLowerCase() !== slicedPath) {
-                    html_require_errors.push(`${slicedPath} => .${filename.replace(resolve(flags.directory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
+                if (slicedPath.toLowerCase() !== slicedPath && !PathMatchesExceptions(slicedPath)) {
+                    html_require_errors.push(`${slicedPath} => .${filename.replace(resolve(gDirectory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
                 }
             }
         }
@@ -157,9 +164,18 @@ const displayErrors = () => {
     }
 };
 
-dir.readFiles(resolve(flags.directory),
-    {
-        exclude: /^\./
-    },
-    fileCallback,
-    displayErrors);
+
+function start(config) {
+    if (config && config.directory) {
+        gDirectory = config.directory;
+        gExceptions = config.exceptions;
+        dir.readFiles(resolve(config.directory),
+        {
+            exclude: /^\./
+        },
+        fileCallback,
+        displayErrors);
+    }
+}
+
+module.exports = start;

@@ -1,20 +1,24 @@
 const dir = require('node-dir');
 const resolve = require('path').resolve;
+const path        = require('path');
+const through     = require('through2');
+const gutil       = require('gulp-util');
+const PluginError = gutil.PluginError;
 
-const constants = {
-    js_fileExtension: 'js',
-    html_fileExtension: 'html'
+const FileExt = {
+    JS: '.js',
+    Html: '.html'
 };
 
-let gDirectory = undefined;
+const ErrorMessages = {
+    Import: (statement) => { return `Invalid uppercase character: ${statement}` }
+}
+
 let gExceptions = undefined;
+let gBasePath = undefined;
 
-let js_import_errors = [];
-let js_require_errors = [];
-let html_require_errors = [];
-
-const PathMatchesExceptions = (path) => {
-    let pathComponents = path.split('/');
+const PathMatchesExceptions = (filePath) => {
+    let pathComponents = filePath.split('/');
     for (let i = 0; i < pathComponents.length; ++i) {
         let component = pathComponents[i];
         if (component.toLowerCase() !== component && gExceptions.indexOf(component) === -1) {
@@ -24,11 +28,13 @@ const PathMatchesExceptions = (path) => {
     return true;
 };
 
-const fileCallback = function (err, content, filename, next) {
+function lintFile (content, fileName, fileExtension, errorHandler) {
+    fileName = path.normalize(fileName);
+
     let lines = content.split('\n');
 
     // Javascript file, look for `import`.
-    if (filename.split('.').slice(-1)[0] === constants.js_fileExtension) {
+    if (fileExtension === FileExt.JS) {
         for(let i = 0; i < lines.length; ++i) {
             let line = lines[i];
 
@@ -63,8 +69,10 @@ const fileCallback = function (err, content, filename, next) {
 
                 if (path) {
                     if (path.toLowerCase() !== path && !PathMatchesExceptions(path)) {
-                        js_import_errors.push(`${path} => .${filename.replace(resolve(gDirectory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
-                    }
+                        errorHandler({ 
+                            message: ErrorMessages.Import(path),
+                            line: i + 1
+                        }, `${fileName.replace(gBasePath, '').replace(/\\/g, "/")}`);                    }
                 }
             }
 
@@ -81,14 +89,16 @@ const fileCallback = function (err, content, filename, next) {
                     .replace(';', '');
 
                 if(includeString.toLowerCase() !== includeString && !PathMatchesExceptions(includeString)) {
-                    js_require_errors.push(`${includeString} => .${filename.replace(resolve(gDirectory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
-                }
+                    errorHandler({ 
+                        message: ErrorMessages.Import(includeString),
+                        line: i + 1
+                    }, `${fileName.replace(gBasePath, '').replace(/\\/g, "/")}`);                }
             }
         }
     }
 
     // HTML file, look for `require` tag.
-    else if (filename.split('.').slice(-1)[0] === constants.html_fileExtension) {
+    else if (fileExtension === FileExt.Html) {
         for(let i = 0; i < lines.length; ++i) {
             let line = lines[i];
 
@@ -118,64 +128,27 @@ const fileCallback = function (err, content, filename, next) {
                 slicedPath = slicedPath.slice(0, slicedPath.indexOf(scannedCharacter));
                 slicedPath.replace('"', '');
                 if (slicedPath.toLowerCase() !== slicedPath && !PathMatchesExceptions(slicedPath)) {
-                    html_require_errors.push(`${slicedPath} => .${filename.replace(resolve(gDirectory), '').replace(/\\/g, "/")} ln: ${i + 1}`);
+                    errorHandler({ 
+                        message: ErrorMessages.Import(slicedPath),
+                        line: i + 1
+                    }, `${fileName.replace(gBasePath, '').replace(/\\/g, "/")}`);
                 }
             }
         }
     }
-
-    next();
 };
 
-const displayErrors = () => {
-    let err = '';
-
-    if (js_import_errors.length > 0) {
-        // JS imports
-        err += 'JS - Import paths should not contain uppercase characters:';
-        for(let i = 0; i < js_import_errors.length; ++i) {
-            const error = js_import_errors[i];
-            err += `\n  ${error}`;
+function importLint(config, errorHandler, basePath) {
+    console.log(basePath);
+    gExceptions = config && config.exceptions ? config.exceptions : [];
+    gBasePath = basePath;
+    console.log(gBasePath);
+    return through.obj(function(file, enc, callback) {
+        if (file.isBuffer() && [FileExt.Html, FileExt.JS].indexOf(path.extname(file.path)) !== -1) {
+            lintFile(file.contents.toString(), file.path, path.extname(file.path), errorHandler);
         }
-
-        console.log(err + '\n');
-    }
-
-    if (js_require_errors.length > 0) {
-        // JS requires
-        err = 'JS - Require paths should not contain uppercase characters:';
-        for(let i = 0; i < js_require_errors.length; ++i) {
-            const error = js_require_errors[i];
-            err += `\n  ${error}`;
-        }
-
-        console.log(err + '\n');
-    }
-
-    if (html_require_errors.length > 0) {
-        // JS requires
-        err = 'HTML - Require paths should not contain uppercase characters:';
-        for(let i = 0; i < html_require_errors.length; ++i) {
-            const error = html_require_errors[i];
-            err += `\n  ${error}`;
-        }
-
-        console.log(err + '\n');
-    }
-};
-
-
-function start(config) {
-    if (config && config.directory) {
-        gDirectory = config.directory;
-        gExceptions = config.exceptions;
-        dir.readFiles(resolve(config.directory),
-        {
-            exclude: /^\./
-        },
-        fileCallback,
-        displayErrors);
-    }
+        return callback();
+    });
 }
 
-module.exports = start;
+module.exports = importLint;

@@ -139,10 +139,8 @@ function lintFile (content, fileName, fileExtension, errorHandler) {
 };
 
 function importLint(config, errorHandler, basePath) {
-    console.log(basePath);
     gExceptions = config && config.exceptions ? config.exceptions : [];
     gBasePath = basePath;
-    console.log(gBasePath);
     return through.obj(function(file, enc, callback) {
         if (file.isBuffer() && [FileExt.Html, FileExt.JS].indexOf(path.extname(file.path)) !== -1) {
             lintFile(file.contents.toString(), file.path, path.extname(file.path), errorHandler);

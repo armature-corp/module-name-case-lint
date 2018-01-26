@@ -1,31 +1,20 @@
 {
-  "name": "pathchkr",
-  "version": "0.0.0",
-  "description": "Custom linting tool to ensure that only lower-case characters are used in paths and file names. Applies to HTML, and JS files. ",
+  "name": "module-name-case-lint",
+  "version": "1.0.0",
+  "description": "Lightweight HTML and JS linter for module name case linting",
   "main": "index.js",
   "scripts": {
-    "test": "pathchkr -l ."
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "bin": {
-    "pathchkr": "./index.js"
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/ARMATURECORP/module-name-case-lint.git"
   },
-  "keywords": [
-    "path",
-    "checker",
-    "lowercase",
-    "lint",
-    "tool"
-  ],
-  "author": "Kyle Strader",
+  "author": "ARMATURECORP",
   "license": "ISC",
+  "homepage": "https://bitbucket.org/ARMATURECORP/module-name-case-lint#readme",
   "dependencies": {
     "args": "^3.0.8",
     "node-dir": "^0.1.17"
-  },
-  "devDependencies": {},
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@bitbucket.org/kylestraderarmature/path-checker.git"
-  },
-  "homepage": "https://bitbucket.org/kylestraderarmature/path-checker#readme"
+  }
 }

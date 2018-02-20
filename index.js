@@ -5,23 +5,23 @@ const through     = require('through2');
 const gutil       = require('gulp-util');
 const PluginError = gutil.PluginError;
 
-const FileExt = {
+const fileExt = {
     JS: '.js',
     Html: '.html'
 };
 
-const ErrorMessages = {
+const errorMessages = {
     Import: (statement) => { return `Invalid uppercase character: ${statement}` }
 }
 
-let gExceptions = undefined;
-let gBasePath = undefined;
+let globalExceptions = undefined;
+let globalBasePath = undefined;
 
-const PathMatchesExceptions = (filePath) => {
+const pathMatchesExceptions = (filePath) => {
     let pathComponents = filePath.split('/');
     for (let i = 0; i < pathComponents.length; ++i) {
         let component = pathComponents[i];
-        if (component.toLowerCase() !== component && gExceptions.indexOf(component) === -1) {
+        if (component.toLowerCase() !== component && globalExceptions.indexOf(component) === -1) {
             return false;
         }
     }
@@ -34,7 +34,7 @@ function lintFile (content, fileName, fileExtension, errorHandler) {
     let lines = content.split('\n');
 
     // Javascript file, look for `import`.
-    if (fileExtension === FileExt.JS) {
+    if (fileExtension === fileExt.JS) {
         for(let i = 0; i < lines.length; ++i) {
             let line = lines[i];
 
@@ -68,11 +68,12 @@ function lintFile (content, fileName, fileExtension, errorHandler) {
                 path = path.replace(/\r?\n|\r/, '');
 
                 if (path) {
-                    if (path.toLowerCase() !== path && !PathMatchesExceptions(path)) {
+                    if (path.toLowerCase() !== path && !pathMatchesExceptions(path)) {
                         errorHandler({ 
-                            message: ErrorMessages.Import(path),
+                            message: errorMessages.Import(path),
                             line: i + 1
-                        }, `${fileName.replace(gBasePath, '').replace(/\\/g, "/")}`);                    }
+                        }, `${fileName.replace(globalBasePath, '').replace(/\\/g, "/")}`);
+                    }
                 }
             }
 
@@ -88,17 +89,17 @@ function lintFile (content, fileName, fileExtension, errorHandler) {
                     .replace(')', '')
                     .replace(';', '');
 
-                if(includeString.toLowerCase() !== includeString && !PathMatchesExceptions(includeString)) {
+                if(includeString.toLowerCase() !== includeString && !pathMatchesExceptions(includeString)) {
                     errorHandler({ 
-                        message: ErrorMessages.Import(includeString),
+                        message: errorMessages.Import(includeString),
                         line: i + 1
-                    }, `${fileName.replace(gBasePath, '').replace(/\\/g, "/")}`);                }
+                    }, `${fileName.replace(globalBasePath, '').replace(/\\/g, "/")}`);                }
             }
         }
     }
 
     // HTML file, look for `require` tag.
-    else if (fileExtension === FileExt.Html) {
+    else if (fileExtension === fileExt.Html) {
         for(let i = 0; i < lines.length; ++i) {
             let line = lines[i];
 
@@ -127,11 +128,11 @@ function lintFile (content, fileName, fileExtension, errorHandler) {
                 slicedPath = slicedPath.slice(openPathIndex + 1);
                 slicedPath = slicedPath.slice(0, slicedPath.indexOf(scannedCharacter));
                 slicedPath.replace('"', '');
-                if (slicedPath.toLowerCase() !== slicedPath && !PathMatchesExceptions(slicedPath)) {
+                if (slicedPath.toLowerCase() !== slicedPath && !pathMatchesExceptions(slicedPath)) {
                     errorHandler({ 
-                        message: ErrorMessages.Import(slicedPath),
+                        message: errorMessages.Import(slicedPath),
                         line: i + 1
-                    }, `${fileName.replace(gBasePath, '').replace(/\\/g, "/")}`);
+                    }, `${fileName.replace(globalBasePath, '').replace(/\\/g, "/")}`);
                 }
             }
         }
@@ -139,10 +140,10 @@ function lintFile (content, fileName, fileExtension, errorHandler) {
 };
 
 function importLint(config, errorHandler, basePath) {
-    gExceptions = config && config.exceptions ? config.exceptions : [];
-    gBasePath = basePath;
+    globalExceptions = config && config.exceptions ? config.exceptions : [];
+    globalBasePath = basePath;
     return through.obj(function(file, enc, callback) {
-        if (file.isBuffer() && [FileExt.Html, FileExt.JS].indexOf(path.extname(file.path)) !== -1) {
+        if (file.isBuffer() && [fileExt.Html, fileExt.JS].indexOf(path.extname(file.path)) !== -1) {
             lintFile(file.contents.toString(), file.path, path.extname(file.path), errorHandler);
         }
         return callback();
